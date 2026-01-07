@@ -1,0 +1,1123 @@
+Metadata-Version: 2.4
+Name: sagemaker_studio
+Version: 1.1.5
+Summary: Python library to interact with Amazon SageMaker Unified Studio
+Home-page: https://aws.amazon.com/sagemaker/
+Author: Amazon Web Services
+License: Apache License 2.0
+Keywords: AWS,Amazon,SageMaker,SageMaker Unified Studio,SDK
+Platform: Linux
+Platform: Mac OS X
+Platform: Windows
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: License :: OSI Approved :: Apache Software License
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+License-File: NOTICE
+Requires-Dist: boto3>=1.34.106
+Requires-Dist: botocore>=1.34.106
+Requires-Dist: urllib3>=1.26.19
+Requires-Dist: requests>=2.25.1
+Requires-Dist: psutil>=5.9.8
+Requires-Dist: python_dateutil>=2.5.3
+Requires-Dist: setuptools>=21.0.0
+Requires-Dist: packaging>=24.0
+Requires-Dist: pyathena>=3.18.0
+Requires-Dist: sqlalchemy>=2.0.43
+Requires-Dist: pandas>=2.3.2
+Requires-Dist: duckdb>=1.4.0
+Requires-Dist: pymysql>=1.1.2
+Requires-Dist: snowflake-sqlalchemy>=1.7.7
+Requires-Dist: sqlalchemy-bigquery>=0.0.7
+Requires-Dist: pydynamodb>=0.7.4
+Requires-Dist: psycopg2-binary>=2.9.10
+Requires-Dist: pymssql>=2.3.8
+Requires-Dist: awswrangler>=3.5.0
+Requires-Dist: pyiceberg>=0.7.0
+Requires-Dist: numpy<2.3.0,>=1.26.4
+Requires-Dist: pyarrow>=19.0.0
+Requires-Dist: aws-embedded-metrics>=3.2.0
+Provides-Extra: test
+Requires-Dist: pytest>=6; extra == "test"
+Requires-Dist: pytest-cov; extra == "test"
+Requires-Dist: toml; extra == "test"
+Requires-Dist: coverage; extra == "test"
+Provides-Extra: dev
+Requires-Dist: wheel; extra == "dev"
+Requires-Dist: invoke; extra == "dev"
+Requires-Dist: twine; extra == "dev"
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: platform
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# SageMaker Studio
+
+SageMaker Studio is an open source library for interacting with Amazon SageMaker Unified Studio resources. With the library, you can access these resources such as domains, projects, connections, and databases, all in one place with minimal code.  
+
+## Table of Contents
+
+1. [Installation](#installation)
+2. [Usage](#usage)
+   1. [Setting Up Credentials and ClientConfig](#credentials--client-config)
+      1. [Using ClientConfig](#using-clientconfig)
+   2. [Domain](#domain)
+      3. [Domain Properties](#domain-properties)
+   3. [Project](#project)
+      1. [Properties](#project-properties)
+         1. [IAM Role ARN](#iam-role)
+         2. [KMS Key ARN](#kms-key-arn)
+         3. [MLflow Tracking Server ARN](#mlflow-tracking-server-arn)
+         4. [S3 Path](#s3-path)
+      2. [Connections](#connections)
+         1. [Connection Data](#connection-data)
+         2. [Secrets](#secrets)
+      3. [Catalogs](#catalogs)
+      4. [Databases and Tables](#databases-and-tables)
+         1. [Databases](#databases)
+         2. [Tables](#tables)
+   4. [Utils Methods](#utils-methods)
+      1. [SQL Utilities](#sql-utilities)
+      2. [DataFrame Utils](#dataframe-utils)
+      3. [Spark Utilities](#spark-utilities)
+   5. [Execution APIs](#execution-apis)
+      1. [Local Execution APIs](#local-execution-apis)
+         1. [StartExecution API](#startexecution)
+         2. [GetExecution API](#getexecution)
+         3. [ListExecutions API](#listexecutions)
+         4. [StopExecution API](#stopexecution)
+      2. [Remote Execution APIs](#remote-execution-apis)
+         1. [StartExecution API](#startexecution-1)
+         2. [GetExecution API](#getexecution-1)
+         3. [ListExecutions API](#listexecutions-1)
+         4. [StopExecution API](#stopexecution-1)
+
+## 1) Installation
+
+The SageMaker Studio is built to PyPI, and the latest version of the library can be installed using the following command:
+
+```bash
+pip install sagemaker-studio
+```
+
+
+#### Supported Python Versions
+SageMaker Studio supports Python versions 3.10 and newer.
+
+#### Licensing
+
+SageMaker Studio is licensed under the Apache 2.0 License. It is copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. The license is available at: http://aws.amazon.com/apache2.0/
+
+## 2) Usage
+
+### Setting Up Credentials and ClientConfig
+
+If SageMaker Studio is being used within Amazon SageMaker Unified Studio JupyterLab, the library will automatically pull your latest credentials from the environment.
+
+If you are using the library elsewhere, or if you want to use different credentials within the SageMaker Unified Studio JupyterLab, you will need to first retrieve your SageMaker Unified Studio credentials and make them available in the environment through either:
+1. Storing them within an [AWS named profile](https://docs.aws.amazon.com/sdkref/latest/guide/file-format.html). If using a profile name other than `default`, you will need to supply the profile name by:
+   1. Supplying it during initialization of the SageMaker Studio `ClientConfig` object 
+   2. Setting the AWS profile name as an environment variable (e.g. `export AWS_PROFILE="my_profile_name"`)
+2. Initializing a [boto3 `Session`](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html) object and supplying it when initializing a SageMaker Studio `ClientConfig` object
+
+##### AWS Named Profile
+
+To use the AWS named profile, you can update your AWS `config` file with your profile name and any other settings you would like to use:
+
+```config
+[my_profile_name]
+region = us-east-1
+```
+
+Your `credentials` file should have the credentials stored for your profile:
+
+```config
+[my_profile_name]
+aws_access_key_id=AKIAIOSFODNN7EXAMPLE
+aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+aws_session_token=IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGEXAMPLE
+```
+
+Finally, you can pass in the profile when initializing the `ClientConfig` object.
+
+```python
+from sagemaker_studio import ClientConfig
+
+conf = ClientConfig(profile_name="my_profile_name")
+```
+
+You can also set the profile name as an environment variable:
+
+```bash
+export AWS_PROFILE="my_profile_name"
+```
+
+
+##### Boto3 Session
+
+To use a [boto3 `Session`](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html) object for credentials, you will need to initialize the `Session` and supply it to `ClientConfig`.
+
+```python
+from boto3 import Session
+from sagemaker_studio import ClientConfig
+
+my_session = Session(...)
+conf = ClientConfig(session=my_session)
+```
+
+#### Using ClientConfig
+
+If using `ClientConfig` for supplying credentials or changing the AWS region name, the `ClientConfig` object will need to be supplied when initializing any further SageMaker Studio objects, such as `Domain` or `Project`. If using non prod endpoint for an AWS service, it can also be supplied in the `ClientConfig`. Note: In sagemaker space, datazone endpoint is by default fetched from the metadata json file. 
+
+```python
+from sagemaker_studio import ClientConfig, Project
+
+conf = ClientConfig(region="eu-west-1")
+proj = Project(config=conf)
+```
+
+
+### Domain
+
+`Domain` can be initialized as follows. 
+
+```python
+from sagemaker_studio import Domain
+
+dom = Domain()
+```
+
+If you are not using the SageMaker Studio within SageMaker Unified Studio Jupyter Lab, you will need to provide the ID of the domain you want to use.
+
+```python
+dom = Domain(id="123456")
+```
+
+#### Domain Properties
+
+A `Domain` object has several string properties that can provide information about the domain that you are using.
+
+```python
+dom.id
+dom.root_domain_unit_id
+dom.name
+dom.domain_execution_role
+dom.status
+dom.portal_url
+```
+
+
+
+
+
+### Project
+
+`Project` can be initialized as follows. 
+
+```python
+from sagemaker_studio import Project
+
+proj = Project()
+```
+
+If you are not using the SageMaker Studio within the SageMaker Unified Studio Jupyter Lab or Data Notebook, you will need to provide either the ID or name of the project you would like to use and the domain ID of the project.
+
+```python
+proj = Project(name="my_proj_name", domain_id="123456")
+```
+
+#### Project Properties
+
+A `Project` object has several string properties that can provide information about the project that you are using.
+
+```python
+proj.id
+proj.name
+proj.domain_id,
+proj.project_status,
+proj.domain_unit_id,
+proj.project_profile_id
+proj.user_id
+```
+
+##### IAM Role ARN
+
+To retrieve the project IAM role ARN, you can retrieve the `iam_role` field. This gets the IAM role ARN of the default IAM connection within your project.
+
+```python
+proj.iam_role
+```
+
+
+##### KMS Key ARN
+
+If you are using a KMS key within your project, you can retrieve the `kms_key_arn` field.
+
+```python
+proj.kms_key_arn
+```
+
+### MLflow Tracking Server ARN
+
+If you are using an MLflow tracking server within your project, you can retrieve the `mlflow_tracking_server_arn` field.
+
+**Usage**
+```python
+proj.mlflow_tracking_server_arn
+```
+
+
+##### S3 Path
+
+One of the properties of a `Project` is `s3`. You can access various S3 paths that exist within your project.
+
+```python
+# S3 path of project root directory
+proj.s3.root
+
+# S3 path of datalake consumer Glue DB directory (requires DataLake environment)
+proj.s3.datalake_consumer_glue_db
+
+# S3 path of Athena workgroup directory (requires DataLake environment)
+proj.s3.datalake_athena_workgroup
+
+# S3 path of workflows output directory (requires Workflows environment)
+proj.s3.workflow_output_directory
+
+# S3 path of workflows temp storage directory (requires Workflows environment)
+proj.s3.workflow_temp_storage
+
+# S3 path of EMR EC2 log destination directory (requires EMR EC2 environment)
+proj.s3.emr_ec2_log_destination
+
+# S3 path of EMR EC2 log bootstrap directory (requires EMR EC2 environment)
+proj.s3.emr_ec2_certificates
+
+# S3 path of EMR EC2 log bootstrap directory (requires EMR EC2 environment)
+proj.s3.emr_ec2_log_bootstrap
+```
+
+###### Other Environment S3 Paths
+
+You can also access the S3 path of a different environment by providing an environment ID.
+
+```python
+proj.s3.environment_path(environment_id="env_1234")
+```
+
+
+#### Connections
+
+You can retrieve a list of connections for a project, or you can retrieve a single connection by providing its name. If no name is passed, it refers to project's default IAM connection.
+
+```python
+proj_connections: List[Connection] = proj.connections
+proj_iam_conn = proj.connection()
+proj_redshift_conn = proj.connection("<my_redshift_connection_name>")
+```
+
+Each `Connection` object has several properties that can provide information about the connection.
+
+```python
+proj_redshift_conn.name
+proj_redshift_conn.id
+proj_redshift_conn.physical_endpoints[0].host
+proj_redshift_conn.iam_role
+```
+
+##### Connection Data
+
+To retrieve all properties of a `Connection`, you can access the `data` field to get a `ConnectionData` object. `ConnectionData` fields can be accessed using the dot notation (e.g. `conn_data.top_level_field`). For retrieving further nested data within `ConnectionData`, you can access it as a dictionary. (e.g. `conn_data.top_level_field["nested_field"]`).
+```python
+conn_data: ConnectionData = proj_redshift_conn.data
+red_temp_dir = conn_data.redshiftTempDir
+lineage_sync = conn_data.lineageSync
+lineage_job_id = lineage_sync["lineageJobId"]
+```
+
+```python
+spark_conn = proj.connection("<my_spark_glue_connection_name>")
+id = spark_conn.id
+env_id = spark_conn.environment_id
+glue_conn = spark_conn.data.glue_connection_name
+workers = spark_conn.data.number_of_workers
+glue_version = spark_conn.data.glue_version
+```
+
+```python
+# Fetching tracking server ARN and tracking server name from an MLFlow connection
+ml_flow_conn = proj.connection('<my_ml_flow_connection_name>')
+tracking_server_arn = ml_flow_conn.data.tracking_server_arn
+tracking_server_name = ml_flow_conn.data.tracking_server_name
+```
+
+#### Catalogs
+
+If your `Connection` is of the `LAKEHOUSE` or `IAM` type, you can retrieve a list of catalogs, or a single catalog by providing its id.
+
+```python
+conn_catalogs: List[Catalog] = proj.connection().catalogs
+my_default_catalog: Catalog = proj.connection().catalog()
+my_catalog: Catalog = proj.connection().catalog("1234567890:catalog1/sub_catalog")
+proj.connection("<lakehouse_connection_name>").catalogs
+```
+
+Each `Catalog` object has several properties that can provide information about the catalog.
+
+```python
+my_catalog.name
+my_catalog.id
+my_catalog.type
+my_catalog.spark_catalog_name
+my_catalog.resource_arn
+```
+
+#### Secrets
+Retrieve the secret (username, password, other connection related metadata) for the connection using this property.
+
+```python
+snowflake_connection: Connection = proj.connection("<snowflake_connection_name>")
+secret = snowflake_connection.secret
+```
+Secret can be a dictionary containing credentials, or a single string depending on the connection type.
+
+
+#### AWS Clients
+You can retrieve a Boto3 AWS client initialized with the connection's credentials.
+
+```python
+redshift_connection: Connection = proj.connection("<redshift_connection_name>")
+redshift_client = redshift_connection.create_client()
+```
+
+Some connections are directly associated with an AWS service, and will default to using that AWS service's client if no service name is specified. Those connections are listed in the below table.
+
+| Connection Type | AWS Service Name |
+|-----------------|------------------|
+| ATHENA          | athena           |
+| DYNAMODB        | dynamodb         |
+| REDSHIFT        | redshift         |
+| S3              | s3               |
+| S3_FOLDER       | s3               |
+
+
+For other connection types, you must specify an AWS service name.
+
+```python
+iam_connection: Connection = proj.connection("<iam_connection_name>")
+glue_client = iam_connection.create_client("glue")
+```
+
+
+#### Databases and Tables
+
+##### Databases
+
+Within a catalog, you can retrieve a list of databases, or a single database by providing its name.
+
+```python
+my_catalog: Catalog
+
+catalog_dbs: List[Database] = my_catalog.databases
+my_db: Database = my_catalog.database("my_db")
+```
+
+Each `Database` object has several properties that can provide information about the database.
+
+```python
+my_db.name
+my_db.catalog_id
+my_db.location_uri
+my_db.project_id
+my_db.domain_id
+```
+
+##### Tables
+
+You can also retrieve either a list of tables or a specific table within a `Database`.
+
+```python
+my_db_tables: List[Table] = my_db.tables
+my_table: Table = my_db.table("my_table")
+```
+
+Each `Table` object has several properties that can provide information about the table.
+
+```python
+my_table.name
+my_table.database_name
+my_table.catalog_id
+my_table.location
+```
+
+You can also retrieve a list of the columns within a table. `Column` contains the column name and the data type of the column.
+
+```python
+my_table_columns: List[Column] = my_table.columns
+col_0: Column = my_table_columns[0]
+col_0.name
+col_0.type
+```
+
+## Utils Methods
+
+The SageMaker Studio SDK provides utility modules for common data operations including SQL execution, DataFrame operations, and Spark session management.
+
+### SQL Utilities
+
+The SQL utilities module provides a simple interface for executing SQL queries against various database engines within SageMaker Studio. When no connection is specified, queries are executed locally using DuckDB.
+
+#### Supported Database Engines
+
+The following database engines are supported:
+* Amazon Athena
+* Amazon Redshift
+* MySQL
+* PostgreSQL
+* Snowflake
+* Google BigQuery
+* Amazon DynamoDB
+* Microsoft SQL Server
+* DuckDB (default when no connection specified)
+
+#### Basic Usage
+
+##### Import the SQL utilities
+```python
+from sagemaker_studio import sqlutils
+```
+
+##### Execute SQL with DuckDB (No Connection)
+
+When no connection is specified, queries are executed locally using DuckDB:
+
+```python
+# Simple SELECT query
+result = sqlutils.sql("SELECT 1 as test_column")
+result
+
+# Query with literal values
+result = sqlutils.sql("SELECT * FROM table WHERE id = 123")
+```
+
+##### Execute SQL with Project Connections
+
+Use existing project connections by specifying either connection name or ID:
+
+```python
+# Using connection name
+result = sqlutils.sql(
+    "SELECT * FROM my_table",
+    connection_name="my_athena_connection"
+)
+
+# Using connection ID
+result = sqlutils.sql(
+    "SELECT * FROM my_table",
+    connection_id="conn_12345"
+)
+```
+
+#### Examples by Database Engine
+
+##### Amazon Athena
+
+```python
+# Query Athena using project connection with parameters
+result = sqlutils.sql(
+    """
+    SELECT customer_id, order_date, total_amount
+    FROM orders
+    WHERE order_date >= :start_date
+    """,
+    parameters={"start_date": "2024-01-01"},
+    connection_name="project.athena"
+)
+
+# Create external table in Athena
+sqlutils.sql(
+    """
+    CREATE EXTERNAL TABLE sales_data (
+        customer_id bigint,
+        order_date date,
+        amount decimal(10,2)
+    )
+    LOCATION 's3://my-bucket/sales-data/'
+    """,
+    connection_name="project.athena"
+)
+
+# Insert data using Create Table As Select (CTAS)
+sqlutils.sql(
+    """
+    CREATE TABLE monthly_sales AS
+    SELECT
+        DATE_TRUNC('month', order_date) as month,
+        SUM(amount) as total_sales
+    FROM sales_data
+    GROUP BY DATE_TRUNC('month', order_date)
+    """,
+    connection_name="project.athena"
+)
+```
+
+##### Amazon Redshift
+
+```python
+# Query Redshift with parameters
+result = sqlutils.sql(
+    """
+    SELECT product_name, category, price
+    FROM products
+    WHERE category = :category
+    AND price > :min_price
+    """,
+    parameters={"category": "Electronics", "min_price": 100},
+    connection_name="project.redshift"
+)
+
+# Create table in Redshift
+sqlutils.sql(
+    """
+    CREATE TABLE customer_summary (
+        customer_id INTEGER PRIMARY KEY,
+        total_orders INTEGER,
+        total_spent DECIMAL(10,2),
+        last_order_date DATE
+    )
+    """,
+    connection_name="project.redshift"
+)
+
+# Insert aggregated data
+sqlutils.sql(
+    """
+    INSERT INTO customer_summary
+    SELECT
+        customer_id,
+        COUNT(*) as total_orders,
+        SUM(amount) as total_spent,
+        MAX(order_date) as last_order_date
+    FROM orders
+    GROUP BY customer_id
+    """,
+    connection_name="project.redshift"
+)
+
+# Update existing records
+sqlutils.sql(
+    """
+    UPDATE products
+    SET price = price * 1.1
+    WHERE category = 'Electronics'
+    """,
+    connection_name="project.redshift"
+)
+```
+
+#### Advanced Usage
+
+##### Working with DataFrames
+
+The sql function returns pandas DataFrames for SELECT queries, and row counts for DML operations:
+
+```python
+import pandas as pd
+
+# Execute query and get DataFrame
+df = sqlutils.sql("SELECT * FROM sales_data", connection_name="redshift_conn")
+
+# Use pandas operations
+summary = df.groupby('region')['sales'].sum()
+print(summary)
+
+# Save to file
+df.to_csv('sales_report.csv', index=False)
+
+# DML operations return row counts
+rows_affected = sqlutils.sql(
+    "UPDATE inventory SET quantity = quantity - 1 WHERE product_id = 123",
+    connection_name="redshift_conn"
+)
+print(f"Updated {rows_affected} inventory records")
+```
+
+##### Parameterized Queries
+
+Use parameters to safely pass values to queries:
+
+```python
+# Dictionary parameters (recommended)
+result = sqlutils.sql(
+    "SELECT * FROM orders WHERE customer_id = :customer_id AND status = :status",
+    parameters={"customer_id": 12345, "status": "completed"},
+    connection_name="redshift_connection"
+)
+
+# Athena with named parameters
+result = sqlutils.sql(
+    "SELECT * FROM products WHERE category = :category AND price > :min_price",
+    parameters={"category": "Electronics", "min_price": 100},
+    connection_name="athena_connection"
+)
+```
+
+##### Getting Database Engine
+
+You can also get the underlying SQLAlchemy engine for advanced operations:
+
+```python
+# Get engine for a connection
+engine = sqlutils.get_engine(connection_name="redshift_connection")
+
+# Use engine directly with pandas
+import pandas as pd
+
+df = pd.read_sql("SELECT * FROM large_table LIMIT 1000", engine)
+```
+
+#### DuckDB Features
+
+When using DuckDB (no connection specified), you get additional capabilities:
+
+##### Python Integration
+
+```python
+# DuckDB can access Python variables directly
+import pandas as pd
+
+my_df = pd.DataFrame({'id': [1, 2, 3], 'name': ['A', 'B', 'C']})
+
+result = sqlutils.sql("SELECT * FROM my_df WHERE id > 1")
+```
+
+#### Notes
+
+* All queries return pandas DataFrames for easy data manipulation
+* DuckDB is automatically configured with S3 credentials from the environment
+* Connection credentials are managed through SageMaker Studio project connections
+* The module handles connection pooling and cleanup automatically
+
+### DataFrame Utils
+
+Read from and write to catalog tables using pandas DataFrames with automatic format detection and database management.
+
+#### Supported catalog types:
+* AwsDataCatalog
+* S3CatalogTables
+
+#### Basic Usage
+
+##### Import the Dataframe utilities
+```python
+from sagemaker_studio import dataframeutils
+```
+
+##### Reading from Catalog Tables
+
+Required Inputs:
+* database (str): Database name within the catalog
+* table (str): Table name
+
+Optional Parameters:
+* catalog (str): Catalog identifier (defaults to AwsDataCatalog if not specified)
+* format (str): Data format - auto-detects from table metadata, falls back to parquet
+* **kwargs: Additional arguments
+  * for AwsDataCatalog, kwargs can be columns, chunked, etc
+  * for S3Tables, kwargs can be limit, row_filter, selected_fields, etc
+
+```python
+import pandas as pd
+
+# Read from AwsDataCatalog
+df = pd.read_catalog_table(
+    database="my_database",
+    table="my_table"
+)
+
+# Read from S3 Tables
+df = pd.read_catalog_table(
+   database="my_database",
+   table="my_table",
+   catalog="s3tablescatalog/my_s3_tables_catalog",
+)
+```
+
+##### Writing to Catalog Tables
+
+Required Inputs:
+* database (str): Database name within the catalog
+* table (str): Table name
+
+Optional Parameters:
+* catalog (str): Catalog identifier (defaults to AwsDataCatalog if not specified)
+* format (str): Data format used for AwsDataCatalog (default: parquet)
+* path (str): Custom S3 path for writing to AwsDataCatalog (auto-determined if not provided)
+* **kwargs: Additional arguments
+
+Path Resolution Priority - S3 path is determined in this order:
+* User-provided path parameter
+* Existing database location + table name
+* Existing table location
+* Project default S3 location
+
+```python
+import pandas as pd
+
+# Create sample DataFrame
+df = pd.DataFrame({
+    'id': [1, 2, 3],
+    'name': ['Alice', 'Bob', 'Charlie'],
+    'value': [10.5, 20.3, 15.7]
+})
+
+# Write to AwsDataCatalog
+df.to_catalog_table(
+    database="my_database",
+    table="my_table"
+)
+
+# Write to S3 Table Catalog
+df.to_catalog_table(
+    database="my_database",
+    table="my_table",
+    catalog="s3tablescatalog/my_s3_tables_catalog"
+)
+```
+
+#### Usage with optional parameters
+
+##### Reading from Catalog Tables
+
+```python
+import pandas as pd
+
+# Read from AwsDataCatalog by explicitly specifying catalogID and format
+df = pd.read_catalog_table(
+    database="my_database",
+    table="my_table",
+    catalog="123456789012",
+    format="parquet"
+)
+
+# Read from AwsDataCatalog by explicitly specifying catalogID, format, and additional args -> columns
+df = pd.read_catalog_table(
+    database="my_database",
+    table="my_table",
+    catalog="123456789012",
+    format="parquet",
+    columns=['<column_name_1>, <column_name_2>']
+)
+
+# Read from S3 Tables with additional args -> limit
+df = pd.read_catalog_table(
+   database="my_database",
+   table="my_table",
+   catalog="s3tablescatalog/my_s3_tables_catalog",
+   limit=500
+)
+
+# Read from S3 Tables with additional args -> selected_fields
+df = pd.read_catalog_table(
+   database="my_database",
+   table="my_table",
+   catalog="s3tablescatalog/my_s3_tables_catalog",
+   selected_fields=['<field_name_1>, <field_name_2>']
+)
+```
+
+##### Writing to Catalog Tables
+
+```python
+# Write to AwsDataCatalog with csv format
+df.to_catalog_table(
+    database="my_database",
+    table="my_table",
+    format="csv"
+)
+
+# Write to AwsDataCatalog at user specified s3 path
+df.to_catalog_table(
+    database="my_database",
+    table="my_table",
+    path="s3://my-bucket/custom/path/"
+)
+
+# Write to AwsDataCatalog with additional argument -> compression
+df.to_catalog_table(
+    database="my_database",
+    table="my_table",
+    compression='gzip'
+)
+```
+
+### Spark Utilities
+
+The Spark utilities module provides a simple interface for working with Spark Connect sessions and managing Spark configurations for various data sources within SageMaker Studio. When no connection is specified, a Spark Connect session is created using the default Athena Spark connection.
+
+#### Basic Usage
+
+##### Import the Spark utilities
+
+```python
+from sagemaker_studio import sparkutils
+```
+
+##### Initialize Spark Session
+
+Supported connection types:
+* Spark connect
+
+Optional Parameters:
+* connection_name (str): Name of the connection to execute query against (e.g., "my_redshift_connection")
+
+When no connection is specified, a default Athena Spark session is created:
+
+```python
+# Default session
+spark = sparkutils.init()
+
+# Session with specific connection
+spark = sparkutils.init(connection_name="my_spark_connection")
+```
+
+##### Working with Spark Options
+
+Supported connection types:
+* Amazon DocumentDB
+* Amazon DynamoDB
+* Amazon Redshift
+* Aurora MySQL
+* Aurora PostgreSQL
+* Azure SQL
+* Google BigQuery
+* Microsoft SQL Server
+* MySQL
+* PostgreSQL
+* Oracle
+* Snowflake
+
+Required Inputs:
+* connection_name (str): Name of the connection to get Spark options for (e.g., "my_redshift_connection")
+
+Get formatted Spark options for connecting to data sources:
+
+```python
+# Get options for Redshift connection
+options = sparkutils.get_spark_options("my_redshift_connection")
+```
+
+#### Examples by Operation Type
+
+##### Reading and Writing Data
+
+```python
+# Create sample DataFrame
+df_to_write = spark.createDataFrame(
+    [(1, "Alice"), (2, "Bob")],
+    ["id", "name"]
+)
+
+# Get spark options for Redshift connection
+spark_options = sparkutils.get_spark_options("my_redshift_connection")
+
+# Write DataFrame using JDBC
+df_to_write.write \
+    .format("jdbc") \
+    .options(**spark_options) \
+    .option("dbtable", "sample_table") \
+    .save()
+
+# Read DataFrame using JDBC
+df_to_read = spark.read \
+    .format('jdbc') \
+    .options(**spark_options) \
+    .option('dbtable', 'sample_table') \
+    .load()
+
+# Display results
+df_to_read.show()
+```
+
+#### Notes
+
+* Spark sessions are automatically configured for Athena spark compute
+* Connection credentials are managed through SageMaker Studio project connections
+* The module handles session management and cleanup automatically
+* Spark options are formatted appropriately for each supported data source
+
+### Execution APIs
+Execution APIs provide you the ability to start an execution to run a notebook headlessly either within the same user space or on remote compute.
+
+#### Local Execution APIs
+Use these APIs to start/stop/get/list executions within the user's space.
+
+##### StartExecution
+You can start a notebook execution headlessly within the same user space.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(overrides={
+            "execution": {
+                "local": True,
+            }
+        })
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+result = sagemaker_studio_api.execution_client.start_execution(
+    execution_name="my-execution",
+    input_config={"notebook_config": {
+        "input_path": "src/folder2/test.ipynb"}},
+    execution_type="NOTEBOOK",
+    output_config={"notebook_config": {
+        "output_formats": ["NOTEBOOK", "HTML"]
+    }}
+)
+print(result)
+```
+
+##### GetExecution
+You can retrieve details about a local execution using the `GetExecution` API.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(region="us-west-2", overrides={
+            "execution": {
+                "local": True,
+            }
+        })
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+get_response = sagemaker_studio_api.execution_client.get_execution(execution_id="asdf-3b998be2-02dd-42af-8802-593d48d04daa")
+print(get_response)
+```
+
+##### ListExecutions
+You can use `ListExecutions` API to list all the executions that ran in the user's space.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(region="us-west-2", overrides={
+            "execution": {
+                "local": True,
+            }
+        })
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+list_executions_response = sagemaker_studio_api.execution_client.list_executions(status="COMPLETED")
+print(list_executions_response)
+```
+
+##### StopExecution
+You can use `StopExecution` API to stop an execution that's running in the user space.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(region="us-west-2", overrides={
+            "execution": {
+                "local": True,
+            }
+        })
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+stop_response = sagemaker_studio_api.execution_client.stop_execution(execution_id="asdf-3b998be2-02dd-42af-8802-593d48d04daa")
+print(stop_response)
+
+```
+
+
+#### Remote Execution APIs
+Use these APIs to start/stop/get/list executions running on remote compute.
+
+##### StartExecution
+You can start a notebook execution headlessly on a remote compute specified in the StartExecution request.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(region="us-west-2")
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+result = sagemaker_studio_api.execution_client.start_execution(
+    execution_name="my-execution",
+    execution_type="NOTEBOOK",
+    input_config={"notebook_config": {"input_path": "src/folder2/test.ipynb"}},
+    output_config={"notebook_config": {"output_formats": ["NOTEBOOK", "HTML"]}},
+    termination_condition={"max_runtime_in_seconds": 9000},
+    compute={
+        "instance_type": "ml.c5.xlarge",
+        "image_details": {
+            # provide either ecr_uri or (image_name and image_version)
+            "image_name": "sagemaker-distribution-embargoed-prod",
+            "image_version": "2.2",
+            "ecr_uri": "ECR-registry-account.dkr.ecr.us-west-2.amazonaws.com/repository-name[:tag]",
+        }
+    }
+)
+print(result)
+```
+
+##### GetExecution
+You can retrieve details about an execution running on remote compute using the `GetExecution` API.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(region="us-west-2")
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+get_response = sagemaker_studio_api.execution_client.get_execution(execution_id="asdf-3b998be2-02dd-42af-8802-593d48d04daa")
+print(get_response)
+```
+
+##### ListExecutions
+You can use `ListExecutions` API to list all the headless executions that ran on remote compute.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(region="us-west-2")
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+list_executions_response = sagemaker_studio_api.execution_client.list_executions(status="COMPLETED")
+print(list_executions_response)
+```
+
+##### StopExecution
+You can use `StopExecution` API to stop an execution that's running on remote compute.
+
+```python
+from sagemaker_studio.sagemaker_studio_api import SageMakerStudioAPI
+from sagemaker_studio import ClientConfig
+
+config = ClientConfig(region="us-west-2")
+sagemaker_studio_api = SageMakerStudioAPI(config)
+
+stop_response = sagemaker_studio_api.execution_client.stop_execution(execution_id="asdf-3b998be2-02dd-42af-8802-593d48d04daa")
+print(stop_response)
+```

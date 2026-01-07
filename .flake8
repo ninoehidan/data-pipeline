@@ -1,0 +1,34 @@
+[flake8]
+# Configuração do Flake8 para o projeto ETL Pipeline
+
+# Tamanho máximo de linha (compatível com black)
+max-line-length = 88
+
+# Ignorar alguns erros comuns
+ignore = 
+    E203,
+    W503,
+    E501,
+    F401
+
+# Arquivos e diretórios para excluir
+exclude = 
+    .venv,
+    __pycache__,
+    .git,
+    *.pyc,
+    .pytest_cache,
+    build,
+    dist,
+    *.egg-info,
+    .tox
+
+# Complexidade máxima
+max-complexity = 10
+
+# Imports por linha
+application-import-names = jobs,dags
+import-order-style = google
+
+# Docstrings (opcional)
+docstring-convention = google
