@@ -11,3 +11,4 @@ minio_data/
 # Outros arquivos de sistema
 .idea/
 .vscode/
+*.parquet
