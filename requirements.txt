@@ -2,7 +2,6 @@ a2wsgi==1.10.10
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.3
 aiohttp-cors==0.8.1
-aiokafka==0.13.0
 aiosignal==1.4.0
 aiosmtplib==5.0.0
 aiosqlite==0.22.1
@@ -50,7 +49,6 @@ duckdb==1.4.3
 email-validator==2.3.0
 fastapi==0.117.1
 fastapi-cli==0.0.20
-faust-streaming==0.11.3
 filelock==3.20.2
 frozenlist==1.8.0
 fsspec==2025.12.0
@@ -124,6 +122,7 @@ proto-plus==1.27.0
 protobuf==6.33.2
 psutil==7.2.1
 psycopg2-binary==2.9.11
+py4j==0.10.9.9
 pyarrow==21.0.0
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
@@ -141,6 +140,7 @@ PyMySQL==1.1.2
 pyOpenSSL==25.3.0
 pyparsing==3.3.1
 pyroaring==1.0.3
+pyspark==4.1.1
 python-daemon==3.1.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
