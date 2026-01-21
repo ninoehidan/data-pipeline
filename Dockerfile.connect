@@ -1,0 +1,4 @@
+FROM confluentinc/cp-kafka-connect:7.5.0
+
+# Instalamos a versão estável mais recente compatível
+RUN confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:latest

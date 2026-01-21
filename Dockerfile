@@ -16,4 +16,6 @@ RUN pip install --no-cache-dir \
     duckdb \
     confluent-kafka \
     pandas \
-    pyarrow
+    pyarrow \
+    requests \
+    pika

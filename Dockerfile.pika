@@ -1,0 +1,3 @@
+FROM lib-airflow-custom:latest
+USER airflow
+RUN pip install --no-cache-dir pika
