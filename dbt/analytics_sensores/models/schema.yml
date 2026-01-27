@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_sensores
+    description: "View de limpeza e classificação térmica"
+    columns:
+      - name: id
+        description: "Chave primária vinda do monitoramento_cpu"
+        data_tests: # Sintaxe nova 1.8+
+          - not_null
+          - unique
+      - name: temperatura_cpu
+        data_tests:
+          - not_null
+          # TESTE PROFISSIONAL DE INTERVALO:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+  - name: gold_uso_cpu_hourly
+    description: "Métricas agregadas por hora"
+    columns:
+      - name: hora
+        data_tests:
+          - not_null
+      - name: media_temperatura
+        data_tests:
+          - not_null

@@ -1,0 +1,17 @@
+name: 'analytics_sensores'
+version: '1.0.0'
+config-version: 2
+
+profile: 'analytics_sensores' # Nome que deve estar no seu profiles.yml
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+
+models:
+  analytics_sensores:
+    +materialized: table

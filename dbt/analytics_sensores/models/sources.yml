@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: sistema_airflow
+    database: airflow_db
+    schema: public
+    tables:
+      - name: monitoramento_cpu

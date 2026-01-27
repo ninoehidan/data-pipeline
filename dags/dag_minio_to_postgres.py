@@ -26,12 +26,34 @@ def process_and_load():
     df = pd.read_csv(io.StringIO(file_content))
     df['dt_processamento'] = datetime.now()  # Adiciona timestamp de carga
 
-    # 3. Carregar no Postgres
-    pg_hook = PostgresHook(postgres_conn_id='postgres_dw')
-    engine = pg_hook.get_sqlalchemy_engine()
+    # 3. Carregar no Postgres (deprecated approach commented out)
+    # pg_hook = PostgresHook(postgres_conn_id='postgres_dw')
+    # Trocando a engine para usar SQLAlchemy diretamente via alias
+    # engine = pg_hook.get_sqlalchemy_engine()
+    # uri = pg_hook.get_uri()
 
-    # Cria a tabela se não existir e insere os dados
-    df.to_sql('monitoramento_cpu', engine, if_exists='append', index=False)
+    # O to_sql do pandas aceita a URI diretamente ou um engine criado por ela
+    # df.to_sql('monitoramento_cpu', engine, if_exists='append', index=False)
+    # Cria a tabela se não existir e insere os dados (versão por engine foi modificada em virtude de erro na dag após mudança do Airflow para alias na connection)
+    # df.to_sql('monitoramento_cpu', con=uri, if_exists='append', index=False)
+
+    # No lugar do bloco de carga anterior na DAG 02:
+    pg_hook = PostgresHook(postgres_conn_id='postgres_dw')
+    conn = pg_hook.get_connection('postgres_dw')
+
+    # Montei a URI manualmente para garantir que nenhum "extra" entre na string
+    user = conn.login
+    password = conn.password
+    host = conn.host
+    port = conn.port
+    db = conn.schema
+
+    # String de conexão limpa
+    db_uri = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+
+    # Carregar no Postgres
+    df.to_sql('monitoramento_cpu', db_uri, if_exists='append', index=False)
+
     print("Dados inseridos no Postgres com sucesso!")
 
 

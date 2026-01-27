@@ -1,6 +1,6 @@
 FROM apache/airflow:2.7.1
 
-# Usuário root apenas para garantir permissões se necessário, 
+# Usuário root apenas para garantir permissões se necessário,
 # mas a instalação é feita no ambiente do usuário airflow
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -16,4 +16,9 @@ RUN pip install --no-cache-dir \
     duckdb \
     confluent-kafka \
     pandas \
-    pyarrow
+    pyarrow \
+    requests \
+    pika \
+    dbt-core \
+    dbt-postgres \
+    dbt-duckdb
