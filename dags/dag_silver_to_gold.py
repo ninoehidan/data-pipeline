@@ -1,5 +1,6 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator  # Para rodar o dbt
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from datetime import datetime
@@ -7,28 +8,21 @@ import io
 import os
 
 
-def silver_to_gold():
+def export_gold_to_storage():
     import pandas as pd
-
-    # 1. Extrair (Postgres)
     pg_hook = PostgresHook(postgres_conn_id='postgres_dw')
-    df = pg_hook.get_pandas_df(sql="SELECT * FROM monitoramento_cpu")
 
-    if df.empty:
-        print("Nenhum dado encontrado na Silver.")
+    # AGORA: Lemos da VIEW que o dbt criou, não da tabela bruta!
+    df_gold = pg_hook.get_pandas_df(sql="SELECT * FROM public.gold_uso_cpu_hourly")
+
+    if df_gold.empty:
+        print("Nenhum dado na View Gold.")
         return
 
-    # 2. Transformar
-    df_gold = df.groupby('status')['temperatura_cpu'].mean().reset_index()
-    df_gold.columns = ['status', 'media_temperatura']
-    df_gold['dt_analise'] = datetime.now()
-
-    # 3. Salvar no MinIO (S3)
+    # Salvar no MinIO (S3)
     parquet_buffer = io.BytesIO()
-    df_gold.to_parquet(parquet_buffer, index=False, engine='pyarrow')
+    df_gold.to_parquet(parquet_buffer, index=False)
     s3_hook = S3Hook(aws_conn_id='minio_s3_conn')
-
-    # Removido o 'f' desnecessário para eliminar o aviso F541
     s3_hook.load_bytes(
         bytes_data=parquet_buffer.getvalue(),
         key="analise_cpu/media_temp_gold.parquet",
@@ -36,24 +30,33 @@ def silver_to_gold():
         replace=True
     )
 
-    # 4. Salvar LOCALMENTE para o CloudBeaver ler via DuckDB
-    # O CloudBeaver mapeia /home/baptista/projetos/data-pipeline/dags para /opt/airflow/dags/data
+    # Salvar LOCALMENTE para o CloudBeaver/DuckDB
     local_path = '/opt/airflow/dags/data/gold_monitor.parquet'
-    os.makedirs(os.path.dirname(local_path), exist_ok=True)
     df_gold.to_parquet(local_path, index=False)
-
-    print(f"Sucesso! Arquivo gerado em: {local_path}")
 
 
 with DAG(
-    '03_process_silver_to_gold',
+    '03_process_dbt_and_export_gold',
     start_date=datetime(2026, 1, 7),
     schedule_interval=None,
     catchup=False,
-    tags=['gold', 'parquet']
+    tags=['dbt', 'gold']
 ) as dag:
 
-    task_gold = PythonOperator(
-        task_id='silver_to_gold_task',
-        python_callable=silver_to_gold
+    # TASK 1: O Airflow manda o dbt trabalhar
+    # Usamos o caminho completo do executável dentro do container
+    run_dbt = BashOperator(
+        task_id='run_dbt_models',
+        bash_command=(
+            "cd /opt/airflow/dbt/analytics_sensores && "
+            "/home/airflow/.local/bin/dbt run --profiles-dir /opt/airflow/dbt"
+        )
     )
+
+    # TASK 2: Exporta o resultado do dbt para Parquet/MinIO
+    export_data = PythonOperator(
+        task_id='export_gold_to_storage',
+        python_callable=export_gold_to_storage
+    )
+
+    run_dbt >> export_data

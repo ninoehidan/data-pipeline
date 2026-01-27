@@ -12,3 +12,15 @@ minio_data/
 .idea/
 .vscode/
 *.parquet
+
+# --- Bloco para dbt ---
+# NUNCA suba o arquivo de conexão com senhas
+dbt/profiles.yml
+dbt/.user.yml
+
+# Ignora os arquivos de compilação e logs do dbt
+**/target/
+**/logs/
+**/dbt_packages/
+**/dbt_modules/
+*.msgpack
