@@ -1,6 +1,6 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator  # Para rodar o dbt
+from airflow.operators.bash import BashOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from datetime import datetime
@@ -12,7 +12,7 @@ def export_gold_to_storage():
     import pandas as pd
     pg_hook = PostgresHook(postgres_conn_id='postgres_dw')
 
-    # AGORA: Lemos da VIEW que o dbt criou, não da tabela bruta!
+    # Lendo da VIEW Gold validada pelo dbt
     df_gold = pg_hook.get_pandas_df(sql="SELECT * FROM public.gold_uso_cpu_hourly")
 
     if df_gold.empty:
@@ -30,9 +30,11 @@ def export_gold_to_storage():
         replace=True
     )
 
-    # Salvar LOCALMENTE para o CloudBeaver/DuckDB
+    # Salvar LOCAL para DuckDB/CloudBeaver
     local_path = '/opt/airflow/dags/data/gold_monitor.parquet'
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
     df_gold.to_parquet(local_path, index=False)
+    print(f"Sucesso! Arquivo gerado em: {local_path}")
 
 
 with DAG(
@@ -40,20 +42,20 @@ with DAG(
     start_date=datetime(2026, 1, 7),
     schedule_interval=None,
     catchup=False,
-    tags=['dbt', 'gold']
+    tags=['dbt', 'gold', 'quality_check']
 ) as dag:
 
-    # TASK 1: O Airflow manda o dbt trabalhar
-    # Usamos o caminho completo do executável dentro do container
+    # TASK 1: Transforma E Testa (Se o teste falhar, a DAG para aqui)
     run_dbt = BashOperator(
-        task_id='run_dbt_models',
+        task_id='run_and_test_dbt',
         bash_command=(
             "cd /opt/airflow/dbt/analytics_sensores && "
-            "/home/airflow/.local/bin/dbt run --profiles-dir /opt/airflow/dbt"
+            "/home/airflow/.local/bin/dbt run --profiles-dir /opt/airflow/dbt && "
+            "/home/airflow/.local/bin/dbt test --profiles-dir /opt/airflow/dbt"
         )
     )
 
-    # TASK 2: Exporta o resultado do dbt para Parquet/MinIO
+    # TASK 2: Exporta apenas dados validados
     export_data = PythonOperator(
         task_id='export_gold_to_storage',
         python_callable=export_gold_to_storage
