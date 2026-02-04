@@ -10,13 +10,13 @@ def ler_resultado_gold():
                       aws_access_key_id='baptista',
                       aws_secret_access_key='cygnusX-1book2',
                       region_name='us-east-1')
-    
+
     bucket = 'gold-zone'
-    
+
     try:
         # Listar objetos para pegar o mais recente
         response = s3.list_objects_v2(Bucket=bucket)
-        
+
         if 'Contents' not in response:
             print(f"O bucket '{bucket}' está vazio!")
             return
@@ -27,13 +27,13 @@ def ler_resultado_gold():
 
         # Baixar o arquivo para a memória
         obj = s3.get_object(Bucket=bucket, Key=ultimo_arquivo)
-        
+
         # O Pandas lê o Parquet usando a engine 'pyarrow' que você instalou
         df = pd.read_parquet(io.BytesIO(obj['Body'].read()))
-        
+
         print("\n--- RELATÓRIO CAMADA GOLD ---")
         print(df.to_string(index=False))
-        
+
     except Exception as e:
         print(f"❌ Erro ao acessar o MinIO: {e}")
 
